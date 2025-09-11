@@ -20,6 +20,7 @@ from bmdf.utils import amend_opt, amend_check, amend_run, inplace_opt, no_cwd_tm
 
 CMD_LINE_RGX = re.compile(r'<!-- `(?P<cmd>.+)` -->')
 HTML_OPEN_RGX = re.compile(r'<(?P<tag>\w+)(?: +\w+(?:="[^"]*")?)* *>.*')
+LINK_DEF_RGX = re.compile(r'^\[(?P<ref>[^\]]+)\]: (?P<url>.+)$')
 Write = Callable[[str], None]
 
 DEFAULT_FILE_ENV_VAR = 'MDCMD_DEFAULT_PATH'
@@ -67,6 +68,7 @@ async def process_path(
             cmd_env = os.environ.copy()
             cmd_env['MDCMD_FILE'] = path
 
+            is_link_def = False
             try:
                 line = next(lines)
                 if html_match := HTML_OPEN_RGX.fullmatch(line):
@@ -87,6 +89,10 @@ async def process_path(
                         except StopIteration:
                             break
                     close_lines = None
+                elif LINK_DEF_RGX.match(line):
+                    # Link definition block - skip until empty line or non-link-def line
+                    is_link_def = True
+                    close_lines = None
                 elif not line:
                     close_lines = None
                 else:
@@ -101,7 +107,8 @@ async def process_path(
                     line = next(lines)
 
             write(async_text(cmd, env=cmd_env))
-            if close_lines is None:
+            # Don't add blank line after link definitions
+            if close_lines is None and not is_link_def:
                 write("")
 
     if concurrent:
