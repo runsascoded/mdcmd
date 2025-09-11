@@ -435,7 +435,7 @@ A `mktoc` script is also provided, which just wraps `mdcmd -x '^toc$'` (`mktoc` 
 
 ## Examples <a id="examples"></a>
 - The examples in this file are all rendered by [`bmdf`] and [`mdcmd`].
-- [The TOC](#toc) is rendered by [`toc`].
+- [The TOC](#toc) above is rendered by [`toc`].
 - The [`ci.yml`] GitHub Action verifies the examples and TOC.
 
 These repos' READMEs also use [`bmdf`] / [`mdcmd`] / [`toc`] to execute example commands (and in some cases also verify them with a GitHub Action):
