@@ -20,15 +20,28 @@ from bmdf.utils import amend_opt, amend_check, amend_run, inplace_opt, no_cwd_tm
 
 CMD_LINE_RGX = re.compile(r'<!-- `(?P<cmd>.+)` -->')
 HTML_OPEN_RGX = re.compile(r'<(?P<tag>\w+)(?: +\w+(?:="[^"]*")?)* *>.*')
+LINK_DEF_RGX = re.compile(r'^\[(?P<ref>[^\]]+)\]: (?P<url>.+)$')
 Write = Callable[[str], None]
 
 DEFAULT_FILE_ENV_VAR = 'MDCMD_DEFAULT_PATH'
 DEFAULT_FILE = 'README.md'
 
 
-async def async_text(cmd: str | list[str], env: dict | None = None) -> str:
-    text = await proc.aio.text(cmd, env=env)
-    return text.rstrip('\n')
+class CommandError:
+    """Marker class to indicate a command failed."""
+    def __init__(self, cmd: str | list[str], returncode: int, output: bytes | None = None):
+        self.cmd = cmd
+        self.returncode = returncode
+        self.output = output
+
+
+async def async_text(cmd: str | list[str], env: dict | None = None) -> str | CommandError:
+    from subprocess import CalledProcessError
+    try:
+        text = await proc.aio.text(cmd, env=env)
+        return text.rstrip('\n')
+    except CalledProcessError as e:
+        return CommandError(cmd, e.returncode, e.output)
 
 
 async def async_line(arg: str) -> str:
@@ -41,9 +54,9 @@ async def process_path(
     patterns: Patterns,
     write_fn: Write,
     concurrent: bool = True,
-):
-    blocks: list[Coroutine[None, None, str]] = []
-    def write(arg: str | Coroutine[Any, Any, str]):
+) -> list[CommandError]:
+    blocks: list[Coroutine[None, None, str | CommandError]] = []
+    def write(arg: str | Coroutine[Any, Any, str | CommandError]):
         blocks.append(async_line(arg) if isinstance(arg, str) else arg)
 
     with open(path, 'r') as fd:
@@ -67,6 +80,7 @@ async def process_path(
             cmd_env = os.environ.copy()
             cmd_env['MDCMD_FILE'] = path
 
+            is_link_def = False
             try:
                 line = next(lines)
                 if html_match := HTML_OPEN_RGX.fullmatch(line):
@@ -87,6 +101,10 @@ async def process_path(
                         except StopIteration:
                             break
                     close_lines = None
+                elif LINK_DEF_RGX.match(line):
+                    # Link definition block - skip until empty line or non-link-def line
+                    is_link_def = True
+                    close_lines = None
                 elif not line:
                     close_lines = None
                 else:
@@ -101,17 +119,44 @@ async def process_path(
                     line = next(lines)
 
             write(async_text(cmd, env=cmd_env))
-            if close_lines is None:
+            # Don't add blank line after link definitions
+            if close_lines is None and not is_link_def:
                 write("")
 
+    errors: list[CommandError] = []
     if concurrent:
         gathered = await gather(*blocks)
         for line in gathered:
-            write_fn(line)
+            if isinstance(line, CommandError):
+                errors.append(line)
+                err(f"Command failed with exit code {line.returncode}: {line.cmd if isinstance(line.cmd, str) else ' '.join(line.cmd)}")
+                if line.output:
+                    output_str = line.output.decode() if isinstance(line.output, bytes) else line.output
+                    # Only show first few lines of output to avoid clutter
+                    output_lines = output_str.rstrip('\n').split('\n')
+                    if len(output_lines) > 5:
+                        err(f"Output (first 5 lines):\n" + '\n'.join(output_lines[:5]))
+                    else:
+                        err(f"Output:\n{output_str.rstrip()}")
+            else:
+                write_fn(line)
     else:
         for block in blocks:
             line = await block
-            write_fn(line)
+            if isinstance(line, CommandError):
+                errors.append(line)
+                err(f"Command failed with exit code {line.returncode}: {line.cmd if isinstance(line.cmd, str) else ' '.join(line.cmd)}")
+                if line.output:
+                    output_str = line.output.decode() if isinstance(line.output, bytes) else line.output
+                    output_lines = output_str.rstrip('\n').split('\n')
+                    if len(output_lines) > 5:
+                        err(f"Output (first 5 lines):\n" + '\n'.join(output_lines[:5]))
+                    else:
+                        err(f"Output:\n{output_str.rstrip()}")
+            else:
+                write_fn(line)
+
+    return errors
 
 
 @contextmanager
@@ -174,7 +219,7 @@ def main(
 
     tmpdir = None if no_cwd_tmpdir else getcwd()
     with out_fd(inplace, path, out_path, dir=tmpdir) as write:
-        asyncio.run(
+        errors = asyncio.run(
             process_path(
                 path=path,
                 dry_run=dry_run,
@@ -185,6 +230,11 @@ def main(
         )
 
     amend_run(amend)
+
+    if errors:
+        import sys
+        err(f"\n{len(errors)} command(s) failed")
+        sys.exit(1)
 
 
 if __name__ == '__main__':

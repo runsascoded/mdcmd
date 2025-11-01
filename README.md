@@ -10,11 +10,7 @@ seq 3
 # 3
 ```
 
-<!-- `python test/print-ci-yml-ref.py mdcmd` -->
-<p>
-
-☝️ This block is updated programmatically by [`mdcmd`] (and verified [in CI](.github/workflows/ci.yml#L28-L31); see [raw README.md](README.md?plain=1#L5-L11)).
-</p>
+☝️ This block is updated programmatically by [`mdcmd`] (and verified [in CI]; see [raw README.md][raw-mdcmd]).
 
 [![](https://img.shields.io/pypi/v/mdcmd?label=mdcmd&color=blue)][mdcmd] (formerly: [`bmdf`][bmdf])
 
@@ -35,11 +31,7 @@ seq 3
 - [`toc`: Markdown Table of Contents](#toc)
 - [Examples](#examples)
 
-<!-- `python test/print-ci-yml-ref.py toc` -->
-<p>
-
-☝️ This TOC is generated programmatically by [`mdcmd`] and [`toc`] (and verified [in CI](.github/workflows/ci.yml#L28-L31); see [raw README.md](README.md?plain=1#L22-L36)).
-</p>
+☝️ This TOC is generated programmatically by [`mdcmd`] and [`toc`] (and verified [in CI]; see [raw README.md][raw-toc]).
 
 ## Overview <a id="overview"></a>
 This package provides 3 CLIs:
@@ -134,7 +126,7 @@ Notes:
   - If there's already output there, it will be replaced with new/current output.
 
 ### HTML example <a id="mdcmd-html-example"></a>
-Scripts that output raw HTML also work, e.g. [print-table.py](test/print-table.py) generates this table:
+Scripts that output raw HTML also work, e.g. [print-table.py] generates this table:
 
 <!-- `python test/print-table.py` -->
 <table>
@@ -435,7 +427,7 @@ A `mktoc` script is also provided, which just wraps `mdcmd -x '^toc$'` (`mktoc` 
 
 ## Examples <a id="examples"></a>
 - The examples in this file are all rendered by [`bmdf`] and [`mdcmd`].
-- [The TOC](#toc) is rendered by [`toc`].
+- [The TOC](#toc) above is rendered by [`toc`].
 - The [`ci.yml`] GitHub Action verifies the examples and TOC.
 
 These repos' READMEs also use [`bmdf`] / [`mdcmd`] / [`toc`] to execute example commands (and in some cases also verify them with a GitHub Action):
@@ -449,6 +441,7 @@ These repos' READMEs also use [`bmdf`] / [`mdcmd`] / [`toc`] to execute example 
 - [ryan-williams/tdbs-dask]
 - [TileDB-Inc/scverse-ml-workshop-2024]
 
+<!-- `scripts/gh-url.py '`ci.yml`' .github/workflows/ci.yml` -->
 [`ci.yml`]: .github/workflows/ci.yml
 [`bmd`]: #bmd
 [`bmdf`]: #bmdf
@@ -456,7 +449,17 @@ These repos' READMEs also use [`bmdf`] / [`mdcmd`] / [`toc`] to execute example 
 [`bmdfff`]: #bmdfff
 [`mdcmd`]: #mdcmd
 [`toc`]: #toc
+
+<!-- `scripts/gh-url.py toc.py src/bmdf/toc.py` -->
 [toc.py]: src/bmdf/toc.py
+<!-- `scripts/gh-url.py print-table.py test/print-table.py` -->
+[print-table.py]: test/print-table.py
+<!-- `scripts/gh-url.py 'in CI' .github/workflows/ci.yml#L28-L31` -->
+[in CI]: .github/workflows/ci.yml#L28-L31
+<!-- `scripts/raw-readme-link.py mdcmd` -->
+[raw-mdcmd]: README.md?plain=1#L5-L11
+<!-- `scripts/raw-readme-link.py toc` -->
+[raw-toc]: README.md?plain=1#L18-L32
 
 [runsascoded/utz]: https://github.com/runsascoded/utz?tab=readme-ov-file#utz
 [TileDB-Inc/scverse-ml-workshop-2024]: https://github.com/TileDB-Inc/scverse-ml-workshop-2024?tab=readme-ov-file#training-models-on-atlas-scale-single-cell-datasets

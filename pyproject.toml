@@ -1,7 +1,7 @@
 [project]
 name = "mdcmd"
 description = "Execute commands in Markdown files, embed output, generate TOCs"
-version = "0.7.1"
+version = "0.7.2"
 readme = "README.md"
 authors = [
     { name = "Ryan Williams", email = "ryan@runsascoded.com" }
@@ -9,7 +9,7 @@ authors = [
 license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
-    "utz>=0.19.1",
+    "utz>=0.21.1",
     "click>=8",
 ]
 
