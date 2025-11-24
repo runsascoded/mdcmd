@@ -133,6 +133,13 @@ def bmd(
         output = e.output
         if isinstance(output, bytes):
             output = output.decode()
+        # When both=False (include_stderr=False), stderr is separate
+        # Print it to stderr for debugging, but don't include in markdown output
+        if not include_stderr and e.stderr:
+            stderr = e.stderr
+            if isinstance(stderr, bytes):
+                stderr = stderr.decode()
+            print(stderr, file=sys.stderr)
         returncode = e.returncode
 
     lines = [
@@ -204,6 +211,8 @@ def bmd(
 
     file = file or stdout
     print(output, file=file)
+    if returncode != 0:
+        sys.exit(returncode)
 
 
 def bmd_f():
