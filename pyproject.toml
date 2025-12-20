@@ -1,7 +1,7 @@
 [project]
 name = "mdcmd"
 description = "Execute commands in Markdown files, embed output, generate TOCs"
-version = "0.7.3"
+version = "0.7.4"
 readme = "README.md"
 authors = [
     { name = "Ryan Williams", email = "ryan@runsascoded.com" }
