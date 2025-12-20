@@ -37,6 +37,7 @@ BMDF_INCLUDE_STDERR_VAR = 'BMDF_INCLUDE_STDERR'
 @option('-i/-I', '--include-stderr/--no-include-stderr', is_flag=True, default=None, help=f'Capture and interleave both stdout and stderr streams; falls back to ${BMDF_INCLUDE_STDERR_VAR}')
 @option('-s/-S', '--shell/--no-shell', is_flag=True, default=None, help=f'Disable "shell" mode for the command; falls back to ${BMDF_SHELL_VAR}, but defaults to True if neither is set')
 @option('-t', '--fence-type', help="When -f/--fence is 2 or 3, this customizes the fence syntax type that the output is wrapped in")
+@option('-r', '--exit-code', type=int, default=None, help='Expected exit code; bmdf exits 0 if command exits with this code, non-zero otherwise (useful for diff commands that exit 1 on differences)')
 @option('-u/-U', '--expanduser/--no-expanduser', is_flag=True, default=None, help=f'Pass commands through `os.path.expanduser` before `subprocess`; falls back to ${BMDF_EXPANDUSER_VAR}')
 @option('-v/-V', '--expandvars/--no-expandvars', is_flag=True, default=None, help=f'Pass commands through `os.path.expandvars` before `subprocess`; falls back to ${BMDF_EXPANDVARS_VAR}')
 @option('-w', '--workdir', help=f'`cd` to this directory before executing (falls back to ${BMDF_WORKDIR_VAR}')
@@ -52,6 +53,7 @@ def bmd(
     include_stderr: bool = False,
     shell: Optional[bool] = None,
     fence_type: Optional[str] = None,
+    exit_code: Optional[int] = None,
     expanduser: Optional[bool] = None,
     expandvars: Optional[bool] = None,
     workdir: Optional[str] = None,
@@ -211,7 +213,11 @@ def bmd(
 
     file = file or stdout
     print(output, file=file)
-    if returncode != 0:
+    if exit_code is not None:
+        # Expected exit code specified: exit 0 if it matches, 1 otherwise
+        if returncode != exit_code:
+            sys.exit(1)
+    elif returncode != 0:
         sys.exit(returncode)
 
 

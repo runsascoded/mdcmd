@@ -202,6 +202,10 @@ Options:
   -t, --fence-type TEXT           When -f/--fence is 2 or 3, this customizes
                                   the fence syntax type that the output is
                                   wrapped in
+  -r, --exit-code INTEGER         Expected exit code; bmdf exits 0 if command
+                                  exits with this code, non-zero otherwise
+                                  (useful for diff commands that exit 1 on
+                                  differences)
   -u, --expanduser / -U, --no-expanduser
                                   Pass commands through `os.path.expanduser`
                                   before `subprocess`; falls back to
