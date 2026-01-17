@@ -1,0 +1,85 @@
+name: 'mdcmd'
+description: 'Run mdcmd to update Markdown files and verify they are up-to-date'
+branding:
+  icon: 'file-text'
+  color: 'blue'
+
+inputs:
+  version:
+    description: 'mdcmd version to install (default: latest)'
+    required: false
+    default: ''
+  files:
+    description: 'Files to process (space-separated, default: README.md)'
+    required: false
+    default: 'README.md'
+  run-mktoc:
+    description: 'Run mktoc (auto-detects if not specified)'
+    required: false
+    default: ''
+  fail-on-diff:
+    description: 'Fail if uncommitted changes are detected after running'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+
+    - name: Install mdcmd
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.version }}" ]; then
+          uv tool install "mdcmd==${{ inputs.version }}"
+        else
+          uv tool install mdcmd
+        fi
+
+    - name: Auto-detect mktoc need
+      id: detect-toc
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.run-mktoc }}" ]; then
+          echo "run_mktoc=${{ inputs.run-mktoc }}" >> "$GITHUB_OUTPUT"
+        elif grep -q '<!-- `toc` -->' ${{ inputs.files }} 2>/dev/null; then
+          echo "run_mktoc=true" >> "$GITHUB_OUTPUT"
+          echo "Auto-detected toc marker in files, will run mktoc"
+        else
+          echo "run_mktoc=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Run mdcmd
+      shell: bash
+      run: |
+        for file in ${{ inputs.files }}; do
+          echo "Processing: $file"
+          mdcmd "$file"
+        done
+
+    - name: Run mktoc
+      if: steps.detect-toc.outputs.run_mktoc == 'true'
+      shell: bash
+      run: |
+        for file in ${{ inputs.files }}; do
+          echo "Running mktoc on: $file"
+          mktoc "$file"
+        done
+
+    - name: Check for changes
+      if: inputs.fail-on-diff == 'true'
+      shell: bash
+      run: |
+        if ! git diff --quiet ${{ inputs.files }}; then
+          echo "::error::Files are out of date. Run 'mdcmd' locally and commit the changes."
+          echo ""
+          echo "Changed files:"
+          git diff --name-only ${{ inputs.files }}
+          echo ""
+          echo "Diff:"
+          git diff ${{ inputs.files }}
+          exit 1
+        else
+          echo "All files are up-to-date"
+        fi
