@@ -30,6 +30,7 @@ seq 3
     - [`-w/--workdir` / `$BMDF_WORKDIR`](#workdir)
 - [`toc`: Markdown Table of Contents](#toc)
 - [Examples](#examples)
+- [GitHub Action](#github-action)
 
 ☝️ This TOC is generated programmatically by [`mdcmd`] and [`toc`] (and verified [in CI]; see [raw README.md][raw-toc]).
 
@@ -445,6 +446,28 @@ These repos' READMEs also use [`bmdf`] / [`mdcmd`] / [`toc`] to execute example 
 - [ryan-williams/tdbs-dask]
 - [TileDB-Inc/scverse-ml-workshop-2024]
 
+## GitHub Action <a id="github-action"></a>
+A reusable GitHub Action is available on the [`v1` branch][v1-branch]:
+
+```yaml
+- uses: runsascoded/mdcmd@v1
+```
+
+It runs `mdcmd` (and optionally `mktoc`) and fails if the files are out of date.
+
+### Inputs
+| Input | Description | Default |
+|-------|-------------|---------|
+| `version` | mdcmd version to install | latest |
+| `files` | Space-separated files to process | `README.md` |
+| `run-mktoc` | Run mktoc for TOC generation | auto-detect* |
+| `fail-on-diff` | Fail if changes detected | `true` |
+
+\* Auto-detects if files contain `<!-- \`toc\` -->` marker
+
+### Example
+See [use-prms workflow][use-prms-workflow] ([runs][use-prms-runs]) for a real-world example.
+
 <!-- `scripts/gh-url.py '`ci.yml`' .github/workflows/ci.yml` -->
 [`ci.yml`]: .github/workflows/ci.yml
 [`bmd`]: #bmd
@@ -463,7 +486,7 @@ These repos' READMEs also use [`bmdf`] / [`mdcmd`] / [`toc`] to execute example 
 <!-- `scripts/raw-readme-link.py mdcmd` -->
 [raw-mdcmd]: README.md?plain=1#L5-L11
 <!-- `scripts/raw-readme-link.py toc` -->
-[raw-toc]: README.md?plain=1#L18-L32
+[raw-toc]: README.md?plain=1#L18-L33
 
 [runsascoded/utz]: https://github.com/runsascoded/utz?tab=readme-ov-file#utz
 [TileDB-Inc/scverse-ml-workshop-2024]: https://github.com/TileDB-Inc/scverse-ml-workshop-2024?tab=readme-ov-file#training-models-on-atlas-scale-single-cell-datasets
@@ -480,3 +503,6 @@ These repos' READMEs also use [`bmdf`] / [`mdcmd`] / [`toc`] to execute example 
 [bmdf]: https://pypi.org/project/bmdf/
 [pipx]: https://pipx.pypa.io/stable/
 [uv]: https://docs.astral.sh/uv/
+[v1-branch]: https://github.com/runsascoded/mdcmd/tree/v1
+[use-prms-workflow]: https://github.com/runsascoded/use-prms/blob/main/.github/workflows/readme.yml
+[use-prms-runs]: https://github.com/runsascoded/use-prms/actions/workflows/readme.yml
