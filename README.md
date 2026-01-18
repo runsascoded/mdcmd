@@ -12,7 +12,7 @@ seq 3
 
 ☝️ This block is updated programmatically by [`mdcmd`] (and verified [in CI]; see [raw README.md][raw-mdcmd]).
 
-[![](https://img.shields.io/pypi/v/mdcmd?label=mdcmd&color=blue)][mdcmd] (formerly: [`bmdf`][bmdf])
+[![](https://img.shields.io/pypi/v/mdcmd?label=mdcmd&color=blue)][mdcmd]
 
 <a id="toc"></a>
 <!-- `toc` -->
@@ -500,7 +500,6 @@ See [use-prms workflow][use-prms-workflow] ([runs][use-prms-runs]) for a real-wo
 [runsascoded/juq]: https://github.com/runsascoded/juq
 
 [mdcmd]: https://pypi.org/project/mdcmd/
-[bmdf]: https://pypi.org/project/bmdf/
 [pipx]: https://pipx.pypa.io/stable/
 [uv]: https://docs.astral.sh/uv/
 [v1-branch]: https://github.com/runsascoded/mdcmd/tree/v1
