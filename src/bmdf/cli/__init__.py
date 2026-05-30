@@ -5,7 +5,7 @@ from subprocess import PIPE, Popen, CalledProcessError
 from sys import stdout
 from typing import Optional, Tuple, Any, IO
 
-from click import argument, command, option, get_current_context, echo
+from click import argument, command, option, get_current_context, echo, BadParameter, UsageError
 from utz import env, proc
 from utz.process import pipeline
 from utz.process.cmd import Cmd
@@ -27,13 +27,37 @@ BMDF_EXPANDVARS_VAR = 'BMDF_EXPANDVARS'
 
 BMDF_INCLUDE_STDERR_VAR = 'BMDF_INCLUDE_STDERR'
 
+# Output styles, indexed by `-f/--fence` count (0-3); `console` has no `-f` count and is reachable only via `--style`/`bmdc`.
+LEVEL_STYLES = [ 'comment', 'bash', 'split', 'details', ]
+STYLES = [ *LEVEL_STYLES, 'console', ]
+
+
+def resolve_style(value: str) -> str:
+    """Resolve a `-y/--style` value to a canonical style name.
+
+    Matching precedence: exact name, then unique prefix, then (iff no prefix matched) unique substring.
+    """
+    if value in STYLES:
+        return value
+    prefixes = [ s for s in STYLES if s.startswith(value) ]
+    if len(prefixes) == 1:
+        return prefixes[0]
+    if len(prefixes) > 1:
+        raise BadParameter(f"Ambiguous style prefix {value!r}: matches {prefixes}")
+    substrings = [ s for s in STYLES if value in s ]
+    if len(substrings) == 1:
+        return substrings[0]
+    if len(substrings) > 1:
+        raise BadParameter(f"Ambiguous style substring {value!r}: matches {substrings}")
+    raise BadParameter(f"Unknown style {value!r}; choose from {STYLES} (or a unique prefix/substring)")
+
 
 @command("fence", no_args_is_help=True)
 @option('-A', '--strip-ansi', is_flag=True, help='Strip ANSI escape sequences from output')
 @option('-C', '--no-copy', is_flag=True, help=f'Disable copying output to clipboard (normally uses first available executable from {COPY_BINARIES}')
 @option('-e', '--error-fmt', default=BMDF_ERR_FMT, help=f'If the wrapped command exits non-zero, append a line of output formatted with this string. One "%d" placeholder may be used, for the returncode. Defaults to ${BMDF_ERR_FMT_VAR}{BMDF_ERR_FMT_HELP_STR}')
 @option('-E', '--env', 'env_strs', multiple=True, help="k=v env vars to set, for the wrapped command")
-@option('-f', '--fence', 'fence_level', count=True, help='Pass 0-3x to configure output style: 0x: print output lines, prepended by "# "; 1x: print a "```bash" fence block including the <command> and commented output lines; 2x: print a bash-fenced command followed by plain-fenced output lines; 3x: print a <details/> block, with command <summary/> and collapsed output lines in a plain fence.')
+@option('-f', '--fence', 'fence_level', count=True, help='Pass 0-3x to configure output style: 0x: print output lines, prepended by "# "; 1x: print a "```bash" fence block including the <command> and commented output lines; 2x: print a bash-fenced command followed by plain-fenced output lines; 3x: print a <details/> block, with command <summary/> and collapsed output lines in a plain fence. Equivalent to -y/--style {comment,bash,split,details} respectively; passing both with conflicting styles is an error.')
 @option('-i/-I', '--include-stderr/--no-include-stderr', is_flag=True, default=None, help=f'Capture and interleave both stdout and stderr streams; falls back to ${BMDF_INCLUDE_STDERR_VAR}')
 @option('-s/-S', '--shell/--no-shell', is_flag=True, default=None, help=f'Disable "shell" mode for the command; falls back to ${BMDF_SHELL_VAR}, but defaults to True if neither is set')
 @option('-t', '--fence-type', help="When -f/--fence is 2 or 3, this customizes the fence syntax type that the output is wrapped in")
@@ -42,6 +66,7 @@ BMDF_INCLUDE_STDERR_VAR = 'BMDF_INCLUDE_STDERR'
 @option('-v/-V', '--expandvars/--no-expandvars', is_flag=True, default=None, help=f'Pass commands through `os.path.expandvars` before `subprocess`; falls back to ${BMDF_EXPANDVARS_VAR}')
 @option('-w', '--workdir', help=f'`cd` to this directory before executing (falls back to ${BMDF_WORKDIR_VAR}')
 @option('-x', '--executable', help="`shell_executable` to pass to Popen pipelines (default: $SHELL)")
+@option('-y', '--style', default=None, help='Named output style, an alternative to counting -f/--fence: "comment" (=0x -f), "bash" (=1x), "split" (=2x), "details" (=3x), or "console" (a ```console fence with a "$ "-prefixed command and raw, uncommented output). A unique prefix or (failing that) substring also works (e.g. "con"/"sole" -> console). Passing both -f/--fence and -y/--style with conflicting styles is an error.')
 @argument('command', required=True, nargs=-1)
 def bmd(
     command: Tuple[str, ...],
@@ -53,6 +78,7 @@ def bmd(
     include_stderr: bool = False,
     shell: Optional[bool] = None,
     fence_type: Optional[str] = None,
+    style: Optional[str] = None,
     exit_code: Optional[int] = None,
     expanduser: Optional[bool] = None,
     expandvars: Optional[bool] = None,
@@ -184,21 +210,37 @@ def bmd(
             for line in lines:
                 log(line)
 
-    if not fence_level:
+    if style is not None:
+        style = resolve_style(style)
+        if fence_level:
+            implied = LEVEL_STYLES[fence_level] if fence_level < len(LEVEL_STYLES) else None
+            if implied != style:
+                raise UsageError(f"-f/--fence ({fence_level}x -> {implied or 'out of range'}) conflicts with -y/--style ({style})")
+    else:
+        if fence_level >= len(LEVEL_STYLES):
+            raise ValueError(f"Pass -f/--fence at most {len(LEVEL_STYLES) - 1}x")
+        style = LEVEL_STYLES[fence_level]
+
+    if style == 'comment':
         print_commented_lines()
-    elif fence_level == 1:
+    elif style == 'bash':
         with fence('bash', log=log):
             log(cmd_str)
             print_commented_lines()
-    elif fence_level == 2:
+    elif style == 'split':
         with fence('bash', log=log):
             log(cmd_str)
         print_fenced_lines(typ=fence_type)
-    elif fence_level == 3:
+    elif style == 'details':
         with details(code=cmd_str, log=log):
             print_fenced_lines(typ=fence_type)
+    elif style == 'console':
+        with fence(fence_type or 'console', log=log):
+            log(f'$ {cmd_str}')
+            for line in lines:
+                log(line)
     else:
-        raise ValueError(f"Pass -f/--fence at most 3x")
+        raise ValueError(f"Unknown style: {style!r}")
 
     output = '\n'.join(out_lines)
     if not no_copy:
@@ -233,6 +275,11 @@ def bmd_ff():
 
 def bmd_fff():
     sys.argv.insert(1, '-fff')
+    bmd()
+
+
+def bmd_c():
+    sys.argv[1:1] = ['--style', 'console']
     bmd()
 
 

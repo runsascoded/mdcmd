@@ -25,6 +25,7 @@ seq 3
     - [`bmdf` (`bmd -f`): command+output mode](#bmdf)
     - [`bmdff` (`bmd -ff`): two-fence mode](#bmdff)
     - [`bmdfff` (`bmd -fff`): &lt;details&gt; mode](#bmdfff)
+    - [`bmdc` (`bmd -y console`): &lt;console&gt; mode](#bmdc)
     - [Piping](#piping)
     - [Env vars](#env-vars)
     - [`-w/--workdir` / `$BMDF_WORKDIR`](#workdir)
@@ -39,7 +40,7 @@ This package provides 3 CLIs:
 - [`mdcmd`]: execute shell commands in Markdown files, embed output
 - [`bmd`]: run Bash commands, wrap output for Markdown embedding
   - Useful in conjunction with `mdcmd`
-  - [`bmdf`], [`bmdff`], [`bmdfff`] provide different types of "fencing" for command output
+  - [`bmdf`], [`bmdff`], [`bmdfff`], [`bmdc`] provide different output styles (or use [`bmd -y/--style`][styles])
 - [`toc`]: generate Markdown table of contents (with custom "id"s for sections)
 - `mktoc`: convenience wrapper for `mdcmd -x '^toc$'`
 
@@ -193,6 +194,10 @@ Options:
                                   plain-fenced output lines; 3x: print a
                                   <details/> block, with command <summary/>
                                   and collapsed output lines in a plain fence.
+                                  Equivalent to -y/--style
+                                  {comment,bash,split,details} respectively;
+                                  passing both with conflicting styles is an
+                                  error.
   -i, --include-stderr / -I, --no-include-stderr
                                   Capture and interleave both stdout and
                                   stderr streams; falls back to
@@ -219,11 +224,38 @@ Options:
                                   (falls back to $BMDF_WORKDIR
   -x, --executable TEXT           `shell_executable` to pass to Popen
                                   pipelines (default: $SHELL)
+  -y, --style TEXT                Named output style, an alternative to
+                                  counting -f/--fence: "comment" (=0x -f),
+                                  "bash" (=1x), "split" (=2x), "details"
+                                  (=3x), or "console" (a ```console fence with
+                                  a "$ "-prefixed command and raw, uncommented
+                                  output). A unique prefix or (failing that)
+                                  substring also works (e.g. "con"/"sole" ->
+                                  console). Passing both -f/--fence and
+                                  -y/--style with conflicting styles is an
+                                  error.
   --help                          Show this message and exit.
 ```
 </details>
 
-`bmd` (and aliases [`bmdf`], [`bmdff`], [`bmdfff`]) takes a `bash` command as input, and renders the command and/or its output in various Markdown-friendly formats:
+`bmd` (and aliases [`bmdf`], [`bmdff`], [`bmdfff`], [`bmdc`]) takes a `bash` command as input, and renders the command and/or its output in various Markdown-friendly formats.
+
+<a id="styles"></a>
+The output style can be selected two ways:
+- counting `-f/--fence` (0–3×), or
+- naming it with `-y/--style` ({`comment`, `bash`, `split`, `details`, `console`})
+
+The aliases map to specific styles:
+
+| Alias | Equivalent | Style |
+|-------|------------|-------|
+| `bmd` | `bmd -y comment` (`-f` ✕0) | output lines, `# `-commented |
+| [`bmdf`] | `bmd -y bash` (`-f`) | one `bash` fence: command + commented output |
+| [`bmdff`] | `bmd -y split` (`-ff`) | `bash` fence for command, plain fence for output |
+| [`bmdfff`] | `bmd -y details` (`-fff`) | `<details>` block with command `<summary>` |
+| [`bmdc`] | `bmd -y console` | `console` fence: `$ `-prefixed command + raw output |
+
+(`console` has no `-f` count; it's reachable only via `-y console` or `bmdc`.)
 
 ### `bmdf` (`bmd -f`): command+output mode <a id="bmdf"></a>
 
@@ -295,6 +327,24 @@ to:
 10
 ```
 </details>
+
+### `bmdc` (`bmd -y console`): &lt;console&gt; mode <a id="bmdc"></a>
+
+`bmdc` (alias for `bmd -y console`) renders a single ` ```console ` fence, with the command on a `$ `-prefixed prompt line and its output left raw (uncommented), e.g.:
+
+  ````
+  <!-- `bmdc echo yay` -->
+  ````
+
+becomes:
+
+<!-- `bmdc echo yay` -->
+```console
+$ echo yay
+yay
+```
+
+(`-t/--fence-type` overrides the `console` fence language, e.g. for `shell-session`.)
 
 ### Piping <a id="piping"></a>
 Piping works too, e.g.:
@@ -474,6 +524,8 @@ See [use-prms workflow][use-prms-workflow] ([runs][use-prms-runs]) for a real-wo
 [`bmdf`]: #bmdf
 [`bmdff`]: #bmdff
 [`bmdfff`]: #bmdfff
+[`bmdc`]: #bmdc
+[styles]: #styles
 [`mdcmd`]: #mdcmd
 [`toc`]: #toc
 
@@ -486,7 +538,7 @@ See [use-prms workflow][use-prms-workflow] ([runs][use-prms-runs]) for a real-wo
 <!-- `scripts/raw-readme-link.py mdcmd` -->
 [raw-mdcmd]: README.md?plain=1#L5-L11
 <!-- `scripts/raw-readme-link.py toc` -->
-[raw-toc]: README.md?plain=1#L18-L33
+[raw-toc]: README.md?plain=1#L18-L34
 
 [runsascoded/utz]: https://github.com/runsascoded/utz?tab=readme-ov-file#utz
 [TileDB-Inc/scverse-ml-workshop-2024]: https://github.com/TileDB-Inc/scverse-ml-workshop-2024?tab=readme-ov-file#training-models-on-atlas-scale-single-cell-datasets
