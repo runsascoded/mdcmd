@@ -12,7 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: runsascoded/mdcmd@v1
+    - uses: astral-sh/setup-uv@v5
+    # Install from the current checkout (not the published PyPI release) so CI verifies the README against the code under test
+    - run: uv tool install .
+    - run: mdcmd
+    - run: git diff --exit-code
 
   test:
     runs-on: ubuntu-latest
